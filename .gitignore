@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# macOS
+.DS_Store
+
+# Experiment outputs / logs
+outputs/models/
+outputs/logs/
+checkpoints/
+runs/
+wandb/
+
+# Large model files
+*.pt
+*.pth
+*.bin
+*.safetensors
+
+# Downloaded/generated tutorial data
+tutorial_data/
+
+# Keep PDFs out unless deliberately added
+*.pdf
