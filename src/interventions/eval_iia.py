@@ -32,8 +32,8 @@ import pyvene as pv
 from ..data.causal_model import ID2LABEL
 from ..metrics.iia import compute_iia, compute_iia_per_class
 from ..metrics.logits import LabelVerbalizer, decode_label
-from .train_das import _format_unit_locations
-from .patching import _resolve_device, _resolve_verbalizer
+from .train_das import infer_fixed_position, _resolve_das_device
+from .patching import _resolve_verbalizer
 
 
 def _confusion_matrix(
@@ -63,6 +63,7 @@ def evaluate_das_iia(
     verbalizer: Optional[LabelVerbalizer] = None,
     batch_size: int = 8,
     label_names: Optional[list] = None,
+    fixed_position: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Evaluate a (trained or untrained) DAS intervenable on a CF dataset.
 
@@ -87,6 +88,10 @@ def evaluate_das_iia(
     label_names:
         Optional list of label-name strings in canonical order (length =
         number of labels). Defaults to ``verbalizer.labels``.
+    fixed_position:
+        Token position to intervene on for every example. If ``None``, use the
+        mode of ``dataset``'s ``intervention_pos`` values. This must match the
+        fixed position used during DAS training for a clean evaluation.
 
     Returns
     -------
@@ -101,7 +106,7 @@ def evaluate_das_iia(
           (1-D numpy arrays of label ids, in dataset order; handy for
           downstream analysis and plotting).
     """
-    device = _resolve_device(device)
+    device = _resolve_das_device(device)
     intervenable.set_device(device)
     intervenable.disable_model_gradients()
     intervenable.model.eval()
@@ -109,6 +114,7 @@ def evaluate_das_iia(
     verbalizer = _resolve_verbalizer(tokenizer, verbalizer)
     if label_names is None:
         label_names = list(verbalizer.labels)
+    fixed_position = infer_fixed_position(dataset, fixed_position)
 
     loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
 
@@ -129,7 +135,7 @@ def evaluate_das_iia(
             }
             base_labels = batch["base_label_id"].to(device)
             cf_labels = batch["counterfactual_label_id"].to(device)
-            pos_arg = _format_unit_locations(batch["intervention_pos"])
+            pos_arg = int(fixed_position)
 
             # Factual: run the underlying (un-intervened) model directly.
             base_out = intervenable.model(**base_inputs)
@@ -172,6 +178,7 @@ def evaluate_das_iia(
         "iia_per_class": iia_per_class,
         "confusion": confusion,
         "n_examples": int(cf_labels_np.shape[0]),
+        "fixed_position": int(fixed_position),
         "base_preds": base_preds_np,
         "patched_preds": patched_preds_np,
         "gold_cf_labels": cf_labels_np,

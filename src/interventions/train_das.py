@@ -34,6 +34,8 @@ from __future__ import annotations
 
 import json
 import os
+import warnings
+from collections import Counter
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -58,6 +60,26 @@ from .patching import _resolve_device, _resolve_verbalizer
 # ---------------------------------------------------------------------------
 
 
+def _resolve_das_device(device: Union[str, torch.device, None]) -> torch.device:
+    """Resolve the DAS device, avoiding Apple MPS for rotated interventions.
+
+    pyvene's rotated-space interventions call ``torch.linalg.householder_product``
+    through the rotation layer. That operator is not implemented on MPS as of
+    current PyTorch releases, so DAS must run on CUDA or CPU. Activation
+    patching can still use MPS; only learned rotated interventions need this
+    guard.
+    """
+    resolved = _resolve_device(device)
+    if resolved.type == "mps":
+        warnings.warn(
+            "DAS rotated interventions require an operator that is not "
+            "implemented on Apple MPS. Falling back to CPU for DAS training.",
+            RuntimeWarning,
+        )
+        return torch.device("cpu")
+    return resolved
+
+
 def _format_unit_locations(positions: torch.Tensor) -> Union[int, List[int]]:
     """Convert a per-example LongTensor ``[B]`` of positions to the format
     accepted by :meth:`pyvene.IntervenableModel.forward`.
@@ -74,6 +96,53 @@ def _format_unit_locations(positions: torch.Tensor) -> Union[int, List[int]]:
     if all(p == pl[0] for p in pl):
         return int(pl[0])
     return [int(p) for p in pl]
+
+
+def infer_fixed_position(dataset, fixed_position: Optional[int] = None) -> int:
+    """Return the single token position DAS should use for a dataset.
+
+    DAS in this project is a *fixed-site* alignment: one layer, one
+    component, one token position. pyvene treats a Python list of positions as
+    "intervene on all of these positions" for each example, not "one position
+    per example". Passing per-example lists can therefore multiply the hidden
+    dimension (e.g. ``8 positions * 768 hidden = 6144``) and break low-rank
+    rotations. We instead use one fixed integer position for the whole run.
+
+    If ``fixed_position`` is not provided, we use the mode of the dataset's
+    ``intervention_pos`` values and warn if positions are not uniform.
+    """
+    if fixed_position is not None:
+        return int(fixed_position)
+
+    positions: List[int] = []
+    if hasattr(dataset, "examples"):
+        for ex in dataset.examples:
+            if getattr(ex, "intervention_pos", None) is not None:
+                positions.append(int(ex.intervention_pos))
+
+    if not positions:
+        for i in range(len(dataset)):
+            item = dataset[i]
+            pos = item.get("intervention_pos", 0)
+            if isinstance(pos, torch.Tensor):
+                pos = int(pos.item())
+            positions.append(int(pos))
+
+    if not positions:
+        return 0
+
+    counts = Counter(positions)
+    mode_pos, mode_count = counts.most_common(1)[0]
+    if len(counts) > 1:
+        warnings.warn(
+            "DAS is a fixed-position intervention, but the dataset contains "
+            f"multiple intervention positions {dict(counts)}. Using the most "
+            f"common position {mode_pos} ({mode_count}/{len(positions)} examples). "
+            "For stricter experiments, use a single template or pass "
+            "`fixed_position=` explicitly.",
+            RuntimeWarning,
+        )
+    return int(mode_pos)
 
 
 def _collect_optim_params(intervenable: pv.IntervenableModel) -> List[Dict[str, Any]]:
@@ -127,6 +196,7 @@ def train_das_alignment(
     log_path: Optional[str] = None,
     weight_decay: float = 0.0,
     progress: bool = True,
+    fixed_position: Optional[int] = None,
 ) -> DASTrainOutput:
     """Train a DAS rotation on a counterfactual NLI dataset.
 
@@ -165,6 +235,11 @@ def train_das_alignment(
         decay).
     progress:
         Show tqdm progress bars if True.
+    fixed_position:
+        Token position to intervene on for every example. DAS here is a
+        fixed-site alignment, so this should usually be copied from the best
+        activation-patching heatmap cell. If ``None``, we use the mode of
+        ``train_cf_dataset``'s ``intervention_pos`` values.
 
     Returns
     -------
@@ -173,11 +248,12 @@ def train_das_alignment(
         ``{"epoch", "loss", "train_iia"}`` records), and ``meta`` (a
         dict of config + training hyperparameters, useful for logging).
     """
-    device = _resolve_device(device)
+    device = _resolve_das_device(device)
     model.to(device)
     model.eval()  # we never train the base LM
 
     verbalizer = _resolve_verbalizer(tokenizer, verbalizer)
+    fixed_position = infer_fixed_position(train_cf_dataset, fixed_position)
 
     intervenable = pv.IntervenableModel(config, model)
     intervenable.set_device(device)
@@ -230,7 +306,7 @@ def train_das_alignment(
                 "attention_mask": batch["source_attention_mask"].to(device),
             }
             cf_labels = batch["counterfactual_label_id"].to(device)        # [B]
-            pos_arg = _format_unit_locations(batch["intervention_pos"])
+            pos_arg = int(fixed_position)
 
             _, cf_out = intervenable(
                 base_inputs,
@@ -284,6 +360,7 @@ def train_das_alignment(
         "lr": float(lr),
         "batch_size": int(batch_size),
         "weight_decay": float(weight_decay),
+        "fixed_position": int(fixed_position),
         "verbalizer": dict(verbalizer.label_to_string),
         "n_train_examples": int(len(train_cf_dataset)),
         "device": str(device),
