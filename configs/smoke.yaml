@@ -1,0 +1,11 @@
+mode: smoke
+dataset_size: 100
+factual_epochs: 1
+das_steps: 10
+variables:
+  - QP_S
+  - NegP
+layers:
+  - 10
+subspace_dims:
+  - 128

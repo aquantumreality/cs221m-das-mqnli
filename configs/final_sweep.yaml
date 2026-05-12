@@ -1,0 +1,27 @@
+mode: final_sweep
+dataset_size: 5000
+factual_epochs: 5
+das_steps: 1000
+variables:
+  - QP_S
+  - NegP
+  - N_P_O
+  - N_H_O
+  - N_O
+  - NP_O
+  - Q_S
+layers:
+  - 0
+  - 2
+  - 4
+  - 6
+  - 8
+  - 10
+  - 11
+subspace_dims:
+  - 8
+  - 16
+  - 32
+  - 64
+  - 128
+  - 256

@@ -1,0 +1,16 @@
+mode: checkin
+dataset_size: 1000
+factual_epochs: 3
+das_steps: 200
+variables:
+  - QP_S
+  - NegP
+  - N_P_O
+  - N_H_O
+  - N_O
+layers:
+  - 8
+  - 10
+subspace_dims:
+  - 64
+  - 128
