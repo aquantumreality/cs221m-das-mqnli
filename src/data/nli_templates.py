@@ -37,33 +37,104 @@ from .causal_model import (
 # so that both words tokenize to a *single* GPT-2 BPE token when preceded
 # by a space, which keeps the position-wise interventions clean.
 LEXICAL_PAIRS: Tuple[Tuple[str, str, str], ...] = (
-    # EQUIV
+    # EQUIV (identity; entailment in any monotonicity context)
     ("dog", "dog", "EQUIV"),
     ("cat", "cat", "EQUIV"),
+    ("wolf", "wolf", "EQUIV"),
+    ("fox", "fox", "EQUIV"),
+    ("horse", "horse", "EQUIV"),
+    ("robin", "robin", "EQUIV"),
+    ("eagle", "eagle", "EQUIV"),
     ("car", "car", "EQUIV"),
+    ("truck", "truck", "EQUIV"),
+    ("boat", "boat", "EQUIV"),
     ("rose", "rose", "EQUIV"),
+    ("hammer", "hammer", "EQUIV"),
+    ("knife", "knife", "EQUIV"),
     # FORWARD (hyponym -> hypernym; entailment)
+    # mammals
+    ("dog", "mammal", "FORWARD"),
     ("dog", "animal", "FORWARD"),
+    ("cat", "mammal", "FORWARD"),
     ("cat", "animal", "FORWARD"),
     ("wolf", "mammal", "FORWARD"),
+    ("fox", "animal", "FORWARD"),
+    ("horse", "mammal", "FORWARD"),
+    ("cow", "animal", "FORWARD"),
+    # birds
     ("robin", "bird", "FORWARD"),
-    ("rose", "flower", "FORWARD"),
+    ("sparrow", "bird", "FORWARD"),
+    ("eagle", "bird", "FORWARD"),
+    ("owl", "animal", "FORWARD"),
+    # vehicles
     ("car", "vehicle", "FORWARD"),
+    ("truck", "vehicle", "FORWARD"),
+    ("boat", "vehicle", "FORWARD"),
+    ("plane", "vehicle", "FORWARD"),
+    # plants
+    ("rose", "flower", "FORWARD"),
+    ("tulip", "flower", "FORWARD"),
+    # tools
     ("hammer", "tool", "FORWARD"),
-    # REVERSE (hypernym -> hyponym; neutral)
+    ("saw", "tool", "FORWARD"),
+    ("knife", "tool", "FORWARD"),
+    ("drill", "tool", "FORWARD"),
+    # REVERSE (hypernym -> hyponym; neutral in upward contexts)
+    # mammals
+    ("mammal", "dog", "REVERSE"),
     ("animal", "dog", "REVERSE"),
+    ("mammal", "cat", "REVERSE"),
     ("animal", "cat", "REVERSE"),
     ("mammal", "wolf", "REVERSE"),
+    ("animal", "fox", "REVERSE"),
+    ("mammal", "horse", "REVERSE"),
+    ("animal", "cow", "REVERSE"),
+    # birds
     ("bird", "robin", "REVERSE"),
-    ("flower", "rose", "REVERSE"),
+    ("bird", "sparrow", "REVERSE"),
+    ("bird", "eagle", "REVERSE"),
+    ("animal", "owl", "REVERSE"),
+    # vehicles
     ("vehicle", "car", "REVERSE"),
+    ("vehicle", "truck", "REVERSE"),
+    ("vehicle", "boat", "REVERSE"),
+    ("vehicle", "plane", "REVERSE"),
+    # plants
+    ("flower", "rose", "REVERSE"),
+    ("flower", "tulip", "REVERSE"),
+    # tools
     ("tool", "hammer", "REVERSE"),
-    # DISJOINT (contradiction in upward contexts)
+    ("tool", "saw", "REVERSE"),
+    ("tool", "knife", "REVERSE"),
+    ("tool", "drill", "REVERSE"),
+    # DISJOINT (contradiction in upward contexts).
+    # We mix animals x vehicles, animals x tools, animals x plants,
+    # vehicles x plants, vehicles x tools, plants x tools so the
+    # rotation has to find a relation feature, not a category feature.
     ("dog", "car", "DISJOINT"),
-    ("cat", "hammer", "DISJOINT"),
-    ("rose", "truck", "DISJOINT"),
+    ("dog", "hammer", "DISJOINT"),
+    ("cat", "truck", "DISJOINT"),
+    ("cat", "knife", "DISJOINT"),
+    ("wolf", "boat", "DISJOINT"),
+    ("fox", "rose", "DISJOINT"),
+    ("horse", "hammer", "DISJOINT"),
+    ("cow", "plane", "DISJOINT"),
     ("robin", "saw", "DISJOINT"),
+    ("sparrow", "car", "DISJOINT"),
+    ("eagle", "knife", "DISJOINT"),
+    ("owl", "drill", "DISJOINT"),
+    ("car", "rose", "DISJOINT"),
+    ("truck", "rose", "DISJOINT"),
+    ("boat", "hammer", "DISJOINT"),
+    ("plane", "rose", "DISJOINT"),
+    ("rose", "truck", "DISJOINT"),
+    ("rose", "knife", "DISJOINT"),
+    ("tulip", "hammer", "DISJOINT"),
     ("hammer", "rose", "DISJOINT"),
+    ("hammer", "robin", "DISJOINT"),
+    ("saw", "horse", "DISJOINT"),
+    ("knife", "cat", "DISJOINT"),
+    ("drill", "owl", "DISJOINT"),
 )
 
 

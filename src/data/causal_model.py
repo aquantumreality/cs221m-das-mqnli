@@ -92,12 +92,19 @@ RELATION_TO_LABEL_DOWNWARD: Dict[str, str] = {
 # things that are *more general* than it). EQUIV is the reflexive closure;
 # DISJOINT is everything not in either hypernym chain.
 _HYPERNYMS: Dict[str, Tuple[str, ...]] = {
-    # animals
+    # animals - mammals
     "dog":    ("mammal", "animal", "creature"),
     "cat":    ("mammal", "animal", "creature"),
     "wolf":   ("mammal", "animal", "creature"),
-    "robin":  ("bird",   "animal", "creature"),
+    "fox":    ("mammal", "animal", "creature"),
+    "horse":  ("mammal", "animal", "creature"),
+    "cow":    ("mammal", "animal", "creature"),
+    # animals - birds
+    "robin":   ("bird",  "animal", "creature"),
     "sparrow": ("bird",  "animal", "creature"),
+    "eagle":   ("bird",  "animal", "creature"),
+    "owl":     ("bird",  "animal", "creature"),
+    # animal hypernyms
     "mammal": ("animal", "creature"),
     "bird":   ("animal", "creature"),
     "animal": ("creature",),
@@ -105,14 +112,20 @@ _HYPERNYMS: Dict[str, Tuple[str, ...]] = {
     "car":   ("vehicle", "object"),
     "truck": ("vehicle", "object"),
     "bike":  ("vehicle", "object"),
+    "boat":  ("vehicle", "object"),
+    "plane": ("vehicle", "object"),
+    "ship":  ("vehicle", "object"),
     "vehicle": ("object",),
-    # plants
+    # plants / flowers
     "rose":  ("flower", "plant"),
     "tulip": ("flower", "plant"),
     "flower": ("plant",),
     # tools
     "hammer": ("tool", "object"),
     "saw":    ("tool", "object"),
+    "knife":  ("tool", "object"),
+    "drill":  ("tool", "object"),
+    "axe":    ("tool", "object"),
     "tool":   ("object",),
 }
 
